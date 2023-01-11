@@ -15,12 +15,34 @@ impl TryFrom<&[u8]> for Request {
 
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         let request = str::from_utf8(buf)?;
+
+        match get_next_word(request) {
+            Some((method, request)) => {}
+            None => return Err(ParseError::InvalidRequest),
+        }
+
+        let (method, request) = get_next_word(request).ok_or(ParseError::InvalidEncoding)?;
+        let (path, request) = get_next_word(request).ok_or(ParseError::InvalidEncoding)?;
+        let (protocol, _) = get_next_word(request).ok_or(ParseError::InvalidEncoding)?;
+
+        if protocol != "HTTP/1.1" {
+            return Err(ParseError::InvalidProtocol);
+        }
+
         unimplemented!()
     }
 }
 
 fn get_next_word(request: &str) -> Option<(&str, &str)> {
-    unimplemented!()
+    let mut iter = request.chars();
+
+    for (idx, c) in request.chars().enumerate() {
+        if c == ' ' || c == '\r' {
+            return Some((&request[..idx], &request[idx + 1..]));
+        }
+    }
+
+    None
 }
 
 pub enum ParseError {
