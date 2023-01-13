@@ -1,4 +1,4 @@
-use super::method::Method;
+use super::method::{Method, MethodError};
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
@@ -16,11 +16,6 @@ impl TryFrom<&[u8]> for Request {
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         let request = str::from_utf8(buf)?;
 
-        match get_next_word(request) {
-            Some((method, request)) => {}
-            None => return Err(ParseError::InvalidRequest),
-        }
-
         let (method, request) = get_next_word(request).ok_or(ParseError::InvalidEncoding)?;
         let (path, request) = get_next_word(request).ok_or(ParseError::InvalidEncoding)?;
         let (protocol, _) = get_next_word(request).ok_or(ParseError::InvalidEncoding)?;
@@ -28,6 +23,8 @@ impl TryFrom<&[u8]> for Request {
         if protocol != "HTTP/1.1" {
             return Err(ParseError::InvalidProtocol);
         }
+
+        let method: Method = method.parse()?;
 
         unimplemented!()
     }
@@ -63,8 +60,14 @@ impl ParseError {
     }
 }
 
+impl From<MethodError> for ParseError {
+    fn from(_: MethodError) -> Self {
+        Self::InvalidMethod
+    }
+}
+
 impl From<Utf8Error> for ParseError {
-    fn from(value: Utf8Error) -> Self {
+    fn from(_: Utf8Error) -> Self {
         Self::InvalidEncoding
     }
 }
